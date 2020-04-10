@@ -4,10 +4,10 @@ The script given by the customer has more capabilities but he only wants to mana
 
 ## Installation:
 * Paste the .exe file in the same folder where the scrips is located.
-´´´
+```
 .\invoke-MSLatestUpdateDownload-GUI\Download-Latest-Cumulative-Update.exe
 .\invoke-MSLatestUpdateDownload-GUI\Invoke-MSLatestUpdateDownload.ps1
-´´´
+```
 
 ## Release notes
 # Version 1.0.0

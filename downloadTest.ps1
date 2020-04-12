@@ -1,5 +1,4 @@
 function Start-DownloadFile()
-
 {
     param(
                 [parameter(Mandatory=$true)]
@@ -31,9 +30,11 @@ function Start-DownloadFile()
         $targetStream.Write($buffer, 0, $count)
         $count = $responseStream.Read($buffer,0,$buffer.length)
         $downloadedBytes = $downloadedBytes + $count
-        Write-Progress -activity "Downloading file '$($url.split('/') | Select -Last 1)'" -status "Downloaded ($([System.Math]::Floor($downloadedBytes/1024))K of $($totalLength)K): " -PercentComplete ((([System.Math]::Floor($downloadedBytes/1024)) / $totalLength)  * 100)
-        Write-Host ((([System.Math]::Floor($downloadedBytes/1024)) / $totalLength)  * 100)
-        $download_ProgressBar.value = ((([System.Math]::Floor($downloadedBytes/1024)) / $totalLength)  * 100)
+        $currentPercentDownload = [int] ((([System.Math]::Floor($downloadedBytes/1024)) / $totalLength)  * 100)
+        Write-Progress -activity "Downloading file '$($url.split('/') | Select -Last 1)'" -status "Downloaded ($([System.Math]::Floor($downloadedBytes/1024))K of $($totalLength)K): " -PercentComplete $currentPercentDownload
+        Write-Host -NoNewline $currentPercentDownload `r
+        $download_ProgressBar.value = $currentPercentDownload
+        Start-Sleep -s 0.1
     }
 
     Write-Progress -activity "Finished downloading file '$($url.split('/') | Select -Last 1)'"
@@ -41,7 +42,6 @@ function Start-DownloadFile()
     $targetStream.Close()
     $targetStream.Dispose()
     $responseStream.Dispose()
-
 }
 
 Add-Type -AssemblyName System.Windows.Forms

@@ -1,3 +1,49 @@
+function Start-DownloadFile()
+{
+    param(
+                [parameter(Mandatory=$true)]
+                [ValidateNotNullOrEmpty()]
+                [string]$URL,
+        
+                [parameter(Mandatory=$true)]
+                [ValidateNotNullOrEmpty()]
+                [string]$Path,
+        
+                [parameter(Mandatory=$true)]
+                [ValidateNotNullOrEmpty()]
+                [string]$Name
+            )
+    $targetFile = $Path + "\\" + $Name
+    $uri = New-Object "System.Uri" "$URL"
+    $request = [System.Net.HttpWebRequest]::Create($uri)
+    $request.set_Timeout(15000) #15 second timeout
+    $response = $request.GetResponse()
+    $totalLength = [System.Math]::Floor($response.get_ContentLength()/1024)
+    $responseStream = $response.GetResponseStream()
+    $targetStream = New-Object -TypeName System.IO.FileStream -ArgumentList $targetFile, Create
+    $buffer = new-object byte[] 10KB
+    $count = $responseStream.Read($buffer,0,$buffer.length)
+    $downloadedBytes = $count
+
+    while ($count -gt 0)
+    {
+        $targetStream.Write($buffer, 0, $count)
+        $count = $responseStream.Read($buffer,0,$buffer.length)
+        $downloadedBytes = $downloadedBytes + $count
+        $currentPercentDownload = [int] ((([System.Math]::Floor($downloadedBytes/1024)) / $totalLength)  * 100)
+        Write-Progress -activity "Downloading file '$($url.split('/') | Select -Last 1)'" -status "Downloaded ($([System.Math]::Floor($downloadedBytes/1024))K of $($totalLength)K): " -PercentComplete $currentPercentDownload
+        Write-Host -NoNewline $currentPercentDownload `r
+        $download_ProgressBar.value = $currentPercentDownload
+        Start-Sleep -s 0.1
+    }
+
+    Write-Progress -activity "Finished downloading file '$($url.split('/') | Select -Last 1)'"
+    $targetStream.Flush()
+    $targetStream.Close()
+    $targetStream.Dispose()
+    $responseStream.Dispose()
+}
+
 function MSLatestUpdate()
 {
     param(
@@ -41,62 +87,8 @@ function MSLatestUpdate()
     )
     Process {
         # Functions
-        function Start-DownloadFile {
-            param(
-                [parameter(Mandatory=$true)]
-                [ValidateNotNullOrEmpty()]
-                [string]$URL,
         
-                [parameter(Mandatory=$true)]
-                [ValidateNotNullOrEmpty()]
-                [string]$Path,
         
-                [parameter(Mandatory=$true)]
-                [ValidateNotNullOrEmpty()]
-                [string]$Name
-            )
-            Begin {
-                # Construct WebClient object
-                $WebClient = New-Object -TypeName System.Net.WebClient
-            }
-            Process {
-                # Create path if it doesn't exist
-                if (-not(Test-Path -Path $Path)) {
-                    New-Item -Path $Path -ItemType Directory -Force | Out-Null
-                }
-    
-                # Register events for tracking download progress
-                $Global:DownloadComplete = $false
-                $EventDataComplete = Register-ObjectEvent $WebClient DownloadFileCompleted -SourceIdentifier WebClient.DownloadFileComplete -Action {$Global:DownloadComplete = $true}
-                $EventDataProgress = Register-ObjectEvent $WebClient DownloadProgressChanged -SourceIdentifier WebClient.DownloadProgressChanged -Action {$Global:DPCEventArgs = $EventArgs}                
-    
-                # Start download of file
-                $WebClient.DownloadFileAsync($URL, (Join-Path -Path $Path -ChildPath $Name))
-    
-                # Track the download progress
-                do {
-                    $PercentComplete = $Global:DPCEventArgs.ProgressPercentage
-                    $DownloadedBytes = $Global:DPCEventArgs.BytesReceived
-                    #$download_ProgressBar.Value = $PercentComplete 
-                    #Write-Host "Current percent: " $PercentComplete $DownloadedBytes
-                    Write-Progress -Activity "Downloading file: $($Name)" -Id 1 -Status "Downloaded bytes: $($DownloadedBytes)" -PercentComplete $PercentComplete
-                    if ($DownloadedBytes -ne $null) {
-                        Write-Progress -Activity "Downloading file: $($Name)" -Id 1 -Status "Downloaded bytes: $($DownloadedBytes)" -PercentComplete $PercentComplete
-                        Write-Host stilldownloading...
-                    }
-                }
-                until ($Global:DownloadComplete)
-            }
-            End {
-                # Dispose of the WebClient object
-                $WebClient.Dispose()
-    
-                # Unregister events used for tracking download progress
-                Unregister-Event -SourceIdentifier WebClient.DownloadProgressChanged
-                Unregister-Event -SourceIdentifier WebClient.DownloadFileComplete
-            }
-        }
-    
         function Get-MSUpdateXML {
             param(
                 [parameter(Mandatory=$true)]

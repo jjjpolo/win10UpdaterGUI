@@ -32,8 +32,10 @@ function Start-DownloadFile()
         $downloadedBytes = $downloadedBytes + $count
         $currentPercentDownload = [int] ((([System.Math]::Floor($downloadedBytes/1024)) / $totalLength)  * 100)
         Write-Progress -activity "Downloading file '$($url.split('/') | Select -Last 1)'" -status "Downloaded ($([System.Math]::Floor($downloadedBytes/1024))K of $($totalLength)K): " -PercentComplete $currentPercentDownload
-        Write-Host -NoNewline $currentPercentDownload `r
+        Write-Host -NoNewline $currentPercentDownload % `r
         $download_ProgressBar.value = $currentPercentDownload
+        $status_label.Text = "$currentPercentDownload % - Downloaded $([System.Math]::Floor($downloadedBytes/1024))K of $($totalLength)K"
+        $Form.Refresh()
         Start-Sleep -s 0.1
     }
 
@@ -396,7 +398,7 @@ Add-Type -AssemblyName System.Windows.Forms
 [System.Windows.Forms.Application]::EnableVisualStyles()
 
 $Form                            = New-Object system.Windows.Forms.Form
-$Form.ClientSize                 = '1000,500'
+$Form.ClientSize                 = '1000,390'
 $Form.text                       = "DOWNLOAD LATEST CUMULATIVE UPDATE"
 $Form.TopMost                    = $false
 
@@ -449,7 +451,7 @@ $path_textbox.multiline          = $false
 $path_textbox.width              = 250
 $path_textbox.height             = 15
 $path_textbox.location           = New-Object System.Drawing.Point(124,65)
-$path_textbox.text = "C:\"
+$path_textbox.text = (Get-Item -Path ".\").FullName
 $path_textbox.Font               = 'Microsoft Sans Serif,10'
 
 $setPath_btn                     = New-Object system.Windows.Forms.Button
@@ -460,8 +462,8 @@ $setPath_btn.location            = New-Object System.Drawing.Point(380,60)
 $setPath_btn.Font                = 'Microsoft Sans Serif,10'
 $setPath_btn.Add_Click(
     {
+        $contentBackup = $path_textbox.Text
         [System.Reflection.Assembly]::LoadWithPartialName("System.windows.forms")|Out-Null
-
         $foldername = New-Object System.Windows.Forms.FolderBrowserDialog
         $foldername.Description = "Select a folder"
         $foldername.rootfolder = "MyComputer"
@@ -471,9 +473,21 @@ $setPath_btn.Add_Click(
         {
             $folder += $foldername.SelectedPath
         }
+        else
+        {
+            $folder = $contentBackup
+        }
         $path_textbox.Text = $folder
     }
 )
+
+$status_label                          = New-Object system.Windows.Forms.Label
+$status_label.text                     = "..."
+$status_label.AutoSize                 = $true
+$status_label.width                    = 50
+$status_label.height                   = 50
+$status_label.location                 = New-Object System.Drawing.Point(500,30)
+$status_label.Font                     = 'Microsoft Sans Serif,14'
 
 # _____________________________________________________________________________row 3:
 $show_btn                        = New-Object system.Windows.Forms.Button
@@ -483,11 +497,14 @@ $show_btn.height                 = 30
 $show_btn.location               = New-Object System.Drawing.Point(90,115)
 $show_btn.Font                   = 'Microsoft Sans Serif,10'
 $show_btn.Add_Click(
-    {    
-        Write-Host "Showing..."
-        $output_textbox.Text = "Showing... `r`n"
+    {   
+        Write-Host "Getting the last available update..."
+        $download_ProgressBar.Value = 0
+        $status_label.Text = "Getting the last available update... "
+        $output_textbox.Text = "Getting the last available update... `r`n"
+        $Form.Refresh()
         $UpdateType = "CumulativeUpdate"
-        $Path = $path_textbox.Text
+        $Path = (Get-Item -Path ".\").FullName #Actually it does not matter the path whne you only ask for showinjg, so I am setting the path as the current folder to make sure you alway will be able to ask to showing updates
         $OSBuild = $build_combobox.Text
         $OSArchitecture = $architecture_combobox.Text+"-based"
         $List = $True
@@ -499,7 +516,7 @@ $show_btn.Add_Click(
             $output_textbox.AppendText($item)
             $output_textbox.AppendText("`r`n")
         }
-        [System.Windows.Forms.MessageBox]::Show("Showing..." , "Show dialog box")
+        [System.Windows.Forms.MessageBox]::Show("Done!" , "Show dialog box")
     }
 )
 
@@ -511,24 +528,41 @@ $download_btn.location           = New-Object System.Drawing.Point(290,115)
 $download_btn.Font               = 'Microsoft Sans Serif,10'
 $download_btn.Add_Click(
     {    
-        Write-Host "Downloading..."
-        $output_textbox.Text = "Downloading... `r`n"
-        $UpdateType = "CumulativeUpdate"
         $Path = $path_textbox.Text
-        $OSBuild = $build_combobox.Text
-        $OSArchitecture = $architecture_combobox.Text+"-based"
-        $List = $False
-        $response = MSLatestUpdate $UpdateType $Path $OSBuild $OSArchitecture $List
-        foreach($item in ($response-split ";"))
+        if(($Path -ne "") -And (Test-Path $Path -IsValid))
         {
-            $output_textbox.AppendText("`r`n")
-            Write-Host $item
-            $output_textbox.AppendText($item)
-            $output_textbox.AppendText("`r`n")
+            Write-Host "Downloading the last available update..."
+            $status_label.Text = "Downloading..."
+            $download_ProgressBar.Value = 0
+            $output_textbox.Text = "Downloading the last available update... `r`n"
+            $Form.Refresh()
+            $UpdateType = "CumulativeUpdate"
+            $OSBuild = $build_combobox.Text
+            $OSArchitecture = $architecture_combobox.Text+"-based"
+            $List = $False
+            $response = MSLatestUpdate $UpdateType $Path $OSBuild $OSArchitecture $List
+            foreach($item in ($response-split ";"))
+            {
+                $output_textbox.AppendText("`r`n")
+                Write-Host $item
+                $output_textbox.AppendText($item)
+                $output_textbox.AppendText("`r`n")
+            }
+            $status_label.Text = "Done!"
+            [System.Windows.Forms.MessageBox]::Show("Done!" , "Download dialog box")
+            $status_label.Text = "..."
         }
-        [System.Windows.Forms.MessageBox]::Show("Downloading..." , "Show dialog box")
+        else
+        {
+            [System.Windows.Forms.MessageBox]::Show("Please select a valid download destination!" , "Wrong Path Selected!")
+        }
     }
 )
+
+$download_ProgressBar                    = New-Object system.Windows.Forms.ProgressBar
+$download_ProgressBar.width              = 450
+$download_ProgressBar.height             = 50
+$download_ProgressBar.location           = New-Object System.Drawing.Point(500,70)
 
 # _____________________________________________________________________________row 4:
 $output_textbox                  = New-Object system.Windows.Forms.TextBox
@@ -539,10 +573,5 @@ $output_textbox.location         = New-Object System.Drawing.Point(25,160)
 $output_textbox.Font             = 'Microsoft Sans Serif,10'
 
 
-$download_ProgressBar                    = New-Object system.Windows.Forms.ProgressBar
-$download_ProgressBar.width              = 950
-$download_ProgressBar.height             = 30
-$download_ProgressBar.location           = New-Object System.Drawing.Point(25,400)
-
-$Form.controls.AddRange(@($path_textbox,$show_btn,$download_btn,$setPath_btn,$target_label,$build_label,$architecture_combobox,$build_combobox,$output_textbox,$windows_lable, $download_ProgressBar))
+$Form.controls.AddRange(@($path_textbox,$show_btn,$download_btn,$setPath_btn,$target_label,$build_label,$architecture_combobox,$build_combobox,$output_textbox,$windows_lable, $download_ProgressBar, $status_label))
 $Form.ShowDialog()

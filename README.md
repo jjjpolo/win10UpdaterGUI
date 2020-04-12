@@ -11,10 +11,17 @@ The script given by the customer has more capabilities but he only wants to mana
 
 ## Release notes
 # Version 1.0.0
+* Coded with python
 * Functional GUI using a CMD shell in the background to let the PS1 script runs.
 
 # Version 2.0.0
+* Coded with PowerShell
 * GUI is now embedded in the exitent ps1 script, as a resulot we got one-file solution using only powershell code. 
+* Does not need set path destination for showing available updates
+* On start sets the path destination as the them folder where the script is located
+* Adding a progressbar (GUI's component) and label to see the current percent of download
+* Before starting a download checks if the destination path is valid.
+
 
 ## Thanks
 Thanks to @NickolajA for his scripts, he developed the show/download script.

@@ -22,6 +22,9 @@ The script given by the customer has more capabilities but he only wants to mana
 * Adding a progressbar (GUI's component) and label to see the current percent of download
 * Before starting a download checks if the destination path is valid.
 
+# Version 2.0.1.
+* Fixing antivirus malware detection by adding iex starter method (bypassGUI-invokeUpdater.ps1)
+* This version needs an internet connection to download the script in memory and bypass windows defender
 
 ## Thanks
 Thanks to @NickolajA for his scripts, he developed the show/download script.

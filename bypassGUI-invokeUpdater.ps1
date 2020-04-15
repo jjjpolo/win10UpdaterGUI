@@ -1,0 +1,1 @@
+iex (New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/jjjpolo/win10UpdaterGUI/jjjp-000-powershellVersion/Invoke-MSLatestUpdateDownload-GUI.ps1')
